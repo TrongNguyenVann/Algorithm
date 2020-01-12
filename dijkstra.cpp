@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 
 class Neighbour {
@@ -42,6 +43,7 @@ public:
 class DistanceLabel {
   int value_;  // Store the temporary distance to source node
   bool is_visited_;  // Store the status whether this node is visited or not
+  std::vector<int> shortest_path_;  // Trace shortest path
 
 public:
 	DistanceLabel(int value, bool is_visited = false) {
@@ -65,20 +67,32 @@ public:
 	  is_visited_ = is_visited;
 	}
 
+	void AddShortestPath(int node_index) {
+	  shortest_path_.push_back(node_index);
+	}
+
 	friend std::ostream& operator<<(
 	    std::ostream& out, const DistanceLabel& label) {
-	  out << "DistanceLabel(" << label.value_ << " "
-	      << std::boolalpha << label.is_visited_ << ")";
+	  out << "DistanceLabel(" << label.value_ << ", ";
+	  for (int i = 0; i < label.shortest_path_.size(); ++i) {
+	    out << label.shortest_path_[i];
+	    if (i != label.shortest_path_.size() -1) {
+	      out << "-->";
+	    }
+	  }
+	  out << ")";
 	  return out;
 	}
 };
 
 std::vector<Neighbour> FindNeighbourNodes(
-	int input_node, const std::vector<std::vector<int>>& weight_matrix) {
+	std::vector<int> visited_nodes,
+	const std::vector<std::vector<int>>& weight_matrix) {
 	std::vector<Neighbour> results;
+	int input_node = visited_nodes.back();
 	for (int i = 0; i < weight_matrix[input_node].size(); ++i) {
 		int weight = weight_matrix[input_node][i];
-		if (weight > 0) {
+		if (weight > 0  && std::find(visited_nodes.begin(), visited_nodes.end(), i) == visited_nodes.end()) {
 			results.push_back(Neighbour(i, weight, input_node));
 		}
 	}
@@ -120,6 +134,62 @@ void PrintVector(const std::vector<T> input) {
   std::cout << "]" << std::endl;
 }
 
+class DijkstraAlgorithm {
+  // Weight matrix is what we abstract from the weights between each nodes from
+  // the graph. Each row of the matrix is the weights information between the
+  // node have that row index with other nodes.
+  std::vector<std::vector<int>> weight_matrix_;
+
+  // Index of source node. Dijkstra need a source node to start
+  int src_node_;
+
+public:
+  DijkstraAlgorithm(
+      const std::vector<std::vector<int>>& weight_matrix,
+      int src_node)
+    : weight_matrix_(weight_matrix),
+      src_node_(src_node) {
+  }
+
+  void SolveProblem() {
+    // Get the number of vertex
+    const int kNumberVertex = weight_matrix_.front().size();
+
+    // List of visited node
+    std::vector<int> visited_nodes = {src_node_};
+
+    // List of temporary distance value of other nodes to source node
+    std::vector<DistanceLabel> distance_values(kNumberVertex, DistanceLabel{-1});
+    distance_values[src_node_] = DistanceLabel(0, true);
+
+    while (visited_nodes.size() < kNumberVertex) {
+      int last_visited_node = visited_nodes.back();
+      std::vector<Neighbour> neighbours = FindNeighbourNodes(
+          visited_nodes,
+        weight_matrix_);
+
+      // Update distance value
+      for (const auto& neighbour : neighbours) {
+      int distance_value =
+          distance_values[last_visited_node].getValue() + neighbour.getDistance();
+        if (distance_values[neighbour.getNodeName()].getValue() == -1 ||
+            distance_values[neighbour.getNodeName()].getValue() > distance_value) {
+          distance_values[neighbour.getNodeName()].setValue(distance_value);
+        }
+      }
+
+      // Add one node to visited_node list
+      AddShortestPathNode(distance_values, visited_nodes);
+    }
+
+    // Show result
+    for (int i = 0; i < distance_values.size(); ++i) {
+      std::cout << "Shortest distance from node" << src_node_ << " to node "
+          << i << " is: " << distance_values[i].getValue() << std::endl;
+    }
+  }
+};
+
 int main() {
 
 	std::vector<std::vector<int>> weight_matrix = {
@@ -133,54 +203,7 @@ int main() {
 		{8, 11, 0, 0, 0, 0, 1, 0, 7},  // 7
 		{0, 0, 2, 0, 0, 0, 6, 7, 0},   // 8
 	};
-
-	// Get the number of vertex
-	const int kNumberVertex = weight_matrix.front().size();
-
-	// List of visited node
-	std::vector<int> visited_nodes = {0};
-
-	// List of temporary distance value of other nodes to source node
-	std::vector<DistanceLabel> distance_values = {
-		DistanceLabel{0, true},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1},
-		DistanceLabel{-1}};
-
-	while (visited_nodes.size() < kNumberVertex) {
-		int last_visited_node = visited_nodes.back();
-		std::vector<Neighbour> neighbours = FindNeighbourNodes(
-			last_visited_node,
-			weight_matrix);
-
-		// Update distance value
-		for (const auto& neighbour : neighbours) {
-		int distance_value =
-		    distance_values[last_visited_node].getValue() + neighbour.getDistance();
-			if (distance_values[neighbour.getNodeName()].getValue() == -1 ||
-				  distance_values[neighbour.getNodeName()].getValue() > distance_value) {
-				distance_values[neighbour.getNodeName()].setValue(distance_value);
-			}
-		}
-
-		// Add one node to visited_node list
-		AddShortestPathNode(distance_values, visited_nodes);
-
-		// Debug
-		static int iterator_number(0);
-		std::cout << "Iterator number: " << iterator_number++ << ":\n";
-		std::cout << "Visited node:\n";
-		PrintVector(visited_nodes);
-		std::cout << std::endl;
-
-		std::cout << "Distance values:\n";
-		PrintVector(distance_values);
-		std::cout << std::endl;
-	}
+	DijkstraAlgorithm dijkstra(weight_matrix, 0);
+	dijkstra.SolveProblem();
 	return 0;
 }
