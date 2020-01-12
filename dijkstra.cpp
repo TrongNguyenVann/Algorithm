@@ -3,6 +3,10 @@
 
 
 class Neighbour {
+  int node_name;  // Index of the node
+  int distance;  // Distance of this node to node with index neighbour_name
+  int neighbour_name;  // Index of the node that measure distance to this node
+
 public:
 	Neighbour(int node_name, int distance, int neighbour_name) {
 		this->node_name = node_name;
@@ -10,23 +14,61 @@ public:
 		this->neighbour_name = neighbour_name;
 	}
 
-	int node_name;
-	int distance;
-	int neighbour_name;
+  int getDistance() const {
+    return distance;
+  }
+
+  void setDistance(int distance) {
+    this->distance = distance;
+  }
+
+  int getNeighbourName() const {
+    return neighbour_name;
+  }
+
+  void setNeighbourName(int neighbourName) {
+    neighbour_name = neighbourName;
+  }
+
+  int getNodeName() const {
+    return node_name;
+  }
+
+  void setNodeName(int nodeName) {
+    node_name = nodeName;
+  }
 };
 
 class DistanceLabel {
-public:
-	int value;
-	bool is_visited;
+  int value_;  // Store the temporary distance to source node
+  bool is_visited_;  // Store the status whether this node is visited or not
 
+public:
 	DistanceLabel(int value, bool is_visited = false) {
-		this->value = value;
-		this->is_visited = is_visited;
+		this->value_ = value;
+		this->is_visited_ = is_visited;
 	}
 
-	friend std::ostream& operator<<(std::ostream& out, const DistanceLabel& label) {
-	  out << "DistanceLabel(" << label.value << " " << std::boolalpha << label.is_visited << ")";
+	int getValue() const {
+	  return value_;
+	}
+
+	void setValue(int value) {
+	  value_ = value;
+	}
+
+	bool isVisited() const {
+	  return is_visited_;
+	}
+
+	void setIsVisited(bool is_visited) {
+	  is_visited_ = is_visited;
+	}
+
+	friend std::ostream& operator<<(
+	    std::ostream& out, const DistanceLabel& label) {
+	  out << "DistanceLabel(" << label.value_ << " "
+	      << std::boolalpha << label.is_visited_ << ")";
 	  return out;
 	}
 };
@@ -51,18 +93,19 @@ void AddShortestPathNode(
 	int added_node(0);
 	int min_distance(0);
 	for (int i = 0; i < distance_values.size(); ++i) {
-		if (distance_values[i].is_visited == true || distance_values[i].value == -1) {
+		if (distance_values[i].isVisited() == true ||
+		    distance_values[i].getValue() == -1) {
 			continue;
 		}
 
 		// Initialize
-		if (min_distance == 0 || min_distance > distance_values[i].value) {
-			min_distance = distance_values[i].value;
+		if (min_distance == 0 || distance_values[i].getValue() < min_distance) {
+			min_distance = distance_values[i].getValue();
 			added_node = i;
 		}
 	}
 	visited_nodes.push_back(added_node);
-	distance_values[added_node].is_visited = true;
+	distance_values[added_node].setIsVisited(true);
 }
 
 template <class T>
@@ -117,10 +160,11 @@ int main() {
 
 		// Update distance value
 		for (const auto& neighbour : neighbours) {
-			int distance_value = distance_values[last_visited_node].value + neighbour.distance;
-			if (distance_values[neighbour.node_name].value == -1 ||
-				  distance_values[neighbour.node_name].value > distance_value) {
-				distance_values[neighbour.node_name].value = distance_value;
+		int distance_value =
+		    distance_values[last_visited_node].getValue() + neighbour.getDistance();
+			if (distance_values[neighbour.getNodeName()].getValue() == -1 ||
+				  distance_values[neighbour.getNodeName()].getValue() > distance_value) {
+				distance_values[neighbour.getNodeName()].setValue(distance_value);
 			}
 		}
 
